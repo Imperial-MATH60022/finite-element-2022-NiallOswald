@@ -1,0 +1,134 @@
+{
+  "tests": [
+    {
+      "name": "Test integrate",
+      "setup": "sudo -H pip3 install pytest numpy scipy matplotlib",
+      "run": "python3 -m pytest test/test_01_integrate.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test Lagrange points",
+      "setup": "",
+      "run": "python3 -m pytest test/test_02_lagrange_points.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test Vandermonde matrix",
+      "setup": "",
+      "run": "python3 -m pytest test/test_03_vandermonde_matrix.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test finite element initialisation",
+      "setup": "",
+      "run": "python3 -m pytest test/test_04_init_finite_element.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test tabulation",
+      "setup": "",
+      "run": "python3 -m pytest test/test_05_tabulate.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test gradient Vandermonde matrix",
+      "setup": "sudo -H pip3 install pytest",
+      "run": "python -m pytest test/test_06_vandermonde_matrix_grad.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test gradient tabulation",
+      "setup": "",
+      "run": "python3 -m pytest test/test_07_tabulate_grad.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test entity nodes",
+      "setup": "",
+      "run": "python3 -m pytest test/test_08_entity_nodes.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test Jacobian",
+      "setup": "",
+      "run": "python3 -m pytest test/test_09_jacobian.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test function integration",
+      "setup": "",
+      "run": "python3 -m pytest test/test_10_integrate_function.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 1,
+      "points": null
+    },
+    {
+      "name": "Test Helmholtz convergence",
+      "setup": "",
+      "run": "python -m pytest test/test_11_helmholtz_convergence.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 5,
+      "points": null
+    },
+    {
+      "name": "Test Poisson convergence",
+      "setup": "",
+      "run": "python -m pytest test/test_12_poisson_convergence.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 5,
+      "points": null
+    },
+    {
+      "name": "Test mastery exercise",
+      "setup": "",
+      "run": "python3 -m pytest test/test_13_mastery_convergence.py",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 5,
+      "points": null
+    }
+  ]
+}
