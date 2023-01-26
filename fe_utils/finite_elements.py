@@ -1,11 +1,11 @@
 # Cause division to always mean floating point division.
 from __future__ import division
 import numpy as np
-from .reference_elements import ReferenceInterval, ReferenceTriangle
+from .reference_elements import ReferenceCell
 np.seterr(invalid='ignore', divide='ignore')
 
 
-def lagrange_points(cell, degree):
+def lagrange_points(cell: ReferenceCell, degree: int) -> np.ndarray:
     """Construct the locations of the equispaced Lagrange nodes on cell.
 
     :param cell: the :class:`~.reference_elements.ReferenceCell`
@@ -19,7 +19,10 @@ def lagrange_points(cell, degree):
 
     """
 
-    raise NotImplementedError
+    cube = np.indices([degree + 1] * cell.dim)
+    coords_sum = np.sum(cube, axis=0)
+    return np.vstack([
+        grid[coords_sum <= degree] for grid in cube]).T / degree
 
 
 def vandermonde_matrix(cell, degree, points, grad=False):
