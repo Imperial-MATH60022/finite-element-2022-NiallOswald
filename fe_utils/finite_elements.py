@@ -1,7 +1,8 @@
 # Cause division to always mean floating point division.
 from __future__ import division
 import numpy as np
-from .reference_elements import ReferenceCell
+from .reference_elements import (ReferenceCell, ReferenceInterval,
+                                 ReferenceTriangle)
 np.seterr(invalid='ignore', divide='ignore')
 
 
@@ -39,6 +40,14 @@ def vandermonde_matrix(cell, degree, points, grad=False):
     The implementation of this function is left as an :ref:`exercise
     <ex-vandermonde>`.
     """
+
+    if cell is ReferenceInterval:
+        return points ** np.arange(degree + 1)
+    elif cell is ReferenceTriangle:
+        x_p = np.concatenate([np.arange(d, -1, -1) for d in range(degree + 1)])
+        y_p = np.concatenate([np.arange(d + 1) for d in range(degree + 1)])
+        return ((points[:, 0].reshape(-1, 1) ** x_p)
+                * (points[:, 1].reshape(-1, 1) ** y_p))
 
     raise NotImplementedError
 
