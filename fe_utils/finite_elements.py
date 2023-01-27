@@ -115,7 +115,11 @@ class FiniteElement(object):
 
         """
 
-        raise NotImplementedError
+        return np.einsum(
+            'ib,bj',
+            vandermonde_matrix(self.cell, self.degree, points, grad),
+            self.basis_coefs
+        )
 
     def interpolate(self, fn):
         """Interpolate fn onto this finite element by evaluating it
