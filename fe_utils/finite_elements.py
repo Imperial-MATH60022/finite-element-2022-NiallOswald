@@ -40,6 +40,7 @@ def vandermonde_matrix(cell, degree, points, grad=False):
     The implementation of this function is left as an :ref:`exercise
     <ex-vandermonde>`.
     """
+    # Construct the matrix of powers of the coordinates
     if cell is ReferenceInterval:
         i_p = np.array([np.arange(degree + 1)])
 
@@ -52,7 +53,21 @@ def vandermonde_matrix(cell, degree, points, grad=False):
     else:
         raise NotImplementedError
 
-    return np.prod([points[:, i].reshape(-1, 1) ** p for i, p in enumerate(i_p)], axis=0)
+    if grad:
+        d_p = i_p - np.eye(cell.dim).reshape((cell.dim, cell.dim, 1))
+
+        vand_grad = np.array(
+            [np.prod([points[:, i].reshape(-1, 1) ** p
+                      for i, p in enumerate(c_p)], axis=0) for c_p in d_p]
+        )
+        vand_grad = np.einsum('ijk,ik->ijk', vand_grad, i_p)
+        vand_grad = np.nan_to_num(vand_grad, nan=0, posinf=0, neginf=0)
+
+        # Permute axes to match notes
+        return vand_grad.transpose(1, 2, 0)
+
+    return np.prod([points[:, i].reshape(-1, 1) ** p
+                    for i, p in enumerate(i_p)], axis=0)
 
 
 class FiniteElement(object):
