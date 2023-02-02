@@ -1,12 +1,11 @@
 # Cause division to always mean floating point division.
 from __future__ import division
 import numpy as np
-from .reference_elements import (ReferenceCell, ReferenceInterval,
-                                 ReferenceTriangle)
+from .reference_elements import ReferenceInterval, ReferenceTriangle
 np.seterr(invalid='ignore', divide='ignore')
 
 
-def lagrange_points(cell: ReferenceCell, degree: int) -> np.ndarray:
+def lagrange_points(cell, degree):
     """Construct the locations of the equispaced Lagrange nodes on cell.
 
     :param cell: the :class:`~.reference_elements.ReferenceCell`
