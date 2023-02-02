@@ -135,7 +135,7 @@ class FiniteElement(object):
         """
 
         return np.einsum(
-            'ib,bj',
+            'ib...,bj->ij...',
             vandermonde_matrix(self.cell, self.degree, points, grad),
             self.basis_coefs
         )
