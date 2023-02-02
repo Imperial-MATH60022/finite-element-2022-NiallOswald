@@ -40,16 +40,19 @@ def vandermonde_matrix(cell, degree, points, grad=False):
     The implementation of this function is left as an :ref:`exercise
     <ex-vandermonde>`.
     """
-
     if cell is ReferenceInterval:
-        return points ** np.arange(degree + 1)
+        i_p = np.array([np.arange(degree + 1)])
+
     elif cell is ReferenceTriangle:
         x_p = np.concatenate([np.arange(d, -1, -1) for d in range(degree + 1)])
         y_p = np.concatenate([np.arange(d + 1) for d in range(degree + 1)])
-        return ((points[:, 0].reshape(-1, 1) ** x_p)
-                * (points[:, 1].reshape(-1, 1) ** y_p))
 
-    raise NotImplementedError
+        i_p = np.vstack([x_p, y_p])
+
+    else:
+        raise NotImplementedError
+
+    return np.prod([points[:, i].reshape(-1, 1) ** p for i, p in enumerate(i_p)], axis=0)
 
 
 class FiniteElement(object):
