@@ -41,7 +41,7 @@ def vandermonde_matrix(cell, degree, points, grad=False):
     <ex-vandermonde>`.
     """
 
-    # Construct the matrix of powers of the coordinates
+    # Construct the matrix of powers present in the Vandermonde matrix
     if cell is ReferenceInterval:
         i_p = np.array([np.arange(degree + 1)])
 
@@ -55,16 +55,18 @@ def vandermonde_matrix(cell, degree, points, grad=False):
         raise NotImplementedError
 
     if grad:
+        # Modify powers of the coordinates to account for the derivatives
         d_p = i_p - np.eye(cell.dim).reshape((cell.dim, cell.dim, 1))
 
         vand_grad = np.array(
             [np.prod([points[:, i].reshape(-1, 1) ** p
                       for i, p in enumerate(c_p)], axis=0) for c_p in d_p]
         )
+        # Multiply by the powers of the coordinates to complete the derivatives
         vand_grad = np.einsum('ijk,ik->ijk', vand_grad, i_p)
         vand_grad = np.nan_to_num(vand_grad, nan=0, posinf=0, neginf=0)
 
-        # Permute axes to match notes
+        # Permute axes to match the notes
         return vand_grad.transpose(1, 2, 0)
 
     return np.prod([points[:, i].reshape(-1, 1) ** p
