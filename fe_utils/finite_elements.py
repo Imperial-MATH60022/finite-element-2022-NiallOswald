@@ -40,6 +40,7 @@ def vandermonde_matrix(cell, degree, points, grad=False):
     The implementation of this function is left as an :ref:`exercise
     <ex-vandermonde>`.
     """
+
     # Construct the matrix of powers of the coordinates
     if cell is ReferenceInterval:
         i_p = np.array([np.arange(degree + 1)])
