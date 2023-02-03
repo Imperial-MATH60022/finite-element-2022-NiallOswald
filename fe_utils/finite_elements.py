@@ -51,7 +51,7 @@ def vandermonde_matrix(cell, degree, points, grad=False):
         i_p = np.vstack([x_p, y_p])
 
     else:
-        raise NotImplementedError
+        raise ValueError("Unknown reference cell")
 
     if grad:
         # Modify powers of the coordinates to account for the derivatives
