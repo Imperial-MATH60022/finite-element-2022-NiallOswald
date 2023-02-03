@@ -157,7 +157,7 @@ class FiniteElement(object):
 
         """
 
-        raise NotImplementedError
+        return np.array([fn(x) for x in self.nodes])
 
     def __repr__(self):
         return "%s(%s, %s)" % (self.__class__.__name__,
