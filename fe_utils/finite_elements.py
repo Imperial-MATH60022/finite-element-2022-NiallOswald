@@ -58,12 +58,12 @@ def vandermonde_matrix(cell, degree, points, grad=False):
         d_p = i_p - np.eye(cell.dim).reshape(cell.dim, cell.dim, 1)
 
         vand_grad = np.array(
-            [np.prod(points.reshape(len(points), cell.dim, 1) ** c_p, axis=1)
-                for c_p in d_p]
+            [np.prod(points.reshape(len(points), cell.dim, 1) ** p, axis=1)
+                for p in d_p]
         )
 
         # Multiply by the powers of the coordinates to complete the derivatives
-        vand_grad *= i_p.reshape(cell.dim, 1, i_p.shape[1])
+        vand_grad = np.einsum('ijk,ik->ijk', vand_grad, i_p, optimize=True)
         vand_grad = np.nan_to_num(vand_grad, nan=0, posinf=0, neginf=0)
 
         # Permute axes to match the notes
@@ -140,7 +140,8 @@ class FiniteElement(object):
         return np.einsum(
             'ib...,bj->ij...',
             vandermonde_matrix(self.cell, self.degree, points, grad),
-            self.basis_coefs
+            self.basis_coefs,
+            optimize=True
         )
 
     def interpolate(self, fn):
