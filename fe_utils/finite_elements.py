@@ -66,7 +66,7 @@ def vandermonde_matrix(cell, degree, points, grad=False):
 
         return vand_grad
 
-    # Return elementwise product of outer products of coordinates and powers
+    # 'Outer-product'-like tensor power to compute all elements
     return np.prod(points[:, :, np.newaxis] ** i_p, axis=1)
 
 
