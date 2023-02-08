@@ -21,8 +21,7 @@ def lagrange_points(cell, degree):
 
     cube = np.indices([degree + 1] * cell.dim)
     coords_sum = np.sum(cube, axis=0)
-    return np.vstack([
-        grid[coords_sum <= degree] for grid in cube]).T / degree
+    return np.stack(cube, axis=-1)[coords_sum <= degree] / degree
 
 
 def vandermonde_matrix(cell, degree, points, grad=False):
