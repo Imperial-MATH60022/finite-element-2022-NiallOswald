@@ -55,22 +55,20 @@ def vandermonde_matrix(cell, degree, points, grad=False):
 
     if grad:
         # Modify powers of the coordinates to account for the derivatives
-        d_p = i_p - np.eye(cell.dim).reshape(cell.dim, cell.dim, 1)
-
-        vand_grad = np.array(
-            [np.prod(points.reshape(len(points), cell.dim, 1) ** p, axis=1)
-                for p in d_p]
-        )
-
+        d_p = i_p[:, np.newaxis, :] - np.eye(cell.dim)[:, :, np.newaxis]
+        # Repeat grid points into a new axis
+        p_m = np.repeat(points[:, :, np.newaxis], cell.dim, axis=2)
+        # 'Outer-product'-like tensor power to compute all elements
+        vand_grad = np.prod(p_m[:, :, :, np.newaxis] ** d_p, axis=1)
         # Multiply by the powers of the coordinates to complete the derivatives
-        vand_grad = np.einsum('ijk,ik->ijk', vand_grad, i_p, optimize=True)
+        vand_grad = np.einsum('ikj,kj->ijk', vand_grad, i_p, optimize=True)
+        # Tidy up any NaNs or Infs
         vand_grad = np.nan_to_num(vand_grad, nan=0, posinf=0, neginf=0)
 
-        # Permute axes to match the notes
-        return vand_grad.transpose(1, 2, 0)
+        return vand_grad
 
     # Return elementwise product of outer products of coordinates and powers
-    return np.prod(points.reshape(len(points), cell.dim, 1) ** i_p, axis=1)
+    return np.prod(points[:, :, np.newaxis] ** i_p, axis=1)
 
 
 class FiniteElement(object):
