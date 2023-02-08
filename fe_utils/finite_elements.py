@@ -56,9 +56,9 @@ def vandermonde_matrix(cell, degree, points, grad=False):
         # Modify powers of the coordinates to account for the derivatives
         d_p = i_p[:, np.newaxis, :] - np.eye(cell.dim)[:, :, np.newaxis]
         # Repeat grid points into a new axis
-        p_m = np.repeat(points[:, :, np.newaxis], cell.dim, axis=2)
+        point_mat = np.repeat(points[:, :, np.newaxis], cell.dim, axis=2)
         # 'Outer-product'-like tensor power to compute all elements
-        vand_grad = np.prod(p_m[:, :, :, np.newaxis] ** d_p, axis=1)
+        vand_grad = np.prod(point_mat[:, :, :, np.newaxis] ** d_p, axis=1)
         # Multiply by the powers of the coordinates to complete the derivatives
         vand_grad = np.einsum('ikj,kj->ijk', vand_grad, i_p, optimize=True)
         # Tidy up any NaNs or Infs
