@@ -19,7 +19,7 @@ def lagrange_points(cell, degree):
 
     """
 
-    cube = np.indices([degree + 1] * cell.dim)
+    cube = np.indices([degree + 1] * cell.dim)[::-1]
     coords_sum = np.sum(cube, axis=0)
     return np.stack(cube, axis=-1)[coords_sum <= degree] / degree
 
