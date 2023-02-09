@@ -179,4 +179,21 @@ class LagrangeElement(FiniteElement):
         """
 
         nodes = lagrange_points(cell, degree)
-        super(LagrangeElement, self).__init__(cell, degree, nodes)
+
+        class Found(Exception):
+            pass
+
+        entity_nodes = {d: {e: [] for e in range(cell.entity_counts[d])}
+                        for d in range(cell.dim + 1)}
+        for i, n in enumerate(nodes):
+            try:
+                for d in range(cell.dim + 1):
+                    for e in range(cell.entity_counts[d]):
+                        if cell.point_in_entity(n, (d, e)):
+                            entity_nodes[d][e].append(i)
+                            raise Found
+            except Found:
+                pass
+
+        super(LagrangeElement, self).__init__(cell, degree, nodes,
+                                              entity_nodes)
