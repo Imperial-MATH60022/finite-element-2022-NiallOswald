@@ -1,6 +1,7 @@
 import numpy as np
 from . import ReferenceTriangle, ReferenceInterval
 from .finite_elements import LagrangeElement, lagrange_points
+from .quadrature import gauss_quadrature
 from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
 
@@ -188,4 +189,17 @@ class Function(object):
 
         :result: The integral (a scalar)."""
 
-        raise NotImplementedError
+        fs = self.function_space
+        quad = gauss_quadrature(fs.element.cell, fs.element.degree + 1)
+        quad_map = fs.element.tabulate(quad.points)
+        mesh_jacobian = np.array([abs(np.linalg.det(fs.mesh.jacobian(c)))
+                                  for c in range(fs.mesh.entity_counts[-1])])
+
+        return float(np.einsum(
+            "ci,qi,c,q",
+            self.values[fs.cell_nodes],
+            quad_map,
+            mesh_jacobian,
+            quad.weights,
+            optimize=True
+        ))
