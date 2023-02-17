@@ -39,6 +39,9 @@ def vandermonde_matrix(cell, degree, points, grad=False):
     <ex-vandermonde>`.
     """
 
+    # Cast points to a np.ndarray
+    points = np.array(points)
+
     # Construct the matrix of powers present in the Vandermonde matrix
     if cell is ReferenceInterval:
         i_p = np.arange(degree + 1).reshape(1, degree + 1)
