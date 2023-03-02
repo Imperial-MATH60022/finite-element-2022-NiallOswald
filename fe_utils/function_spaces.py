@@ -193,16 +193,16 @@ class Function(object):
         fe = fs.element
         mesh = fs.mesh
 
-        quad = gauss_quadrature(fe.cell, fe.degree)
-        quad_map = fe.tabulate(quad.points)
-        mesh_jacobian = np.array([abs(np.linalg.det(mesh.jacobian(c)))
-                                  for c in range(mesh.entity_counts[-1])])
+        Q = gauss_quadrature(fe.cell, fe.degree)
+        phi = fe.tabulate(Q.points)
+        detJ = np.array([abs(np.linalg.det(mesh.jacobian(c)))
+                         for c in range(mesh.entity_counts[-1])])
 
         return float(np.einsum(
             "ci,qi,c,q",
             self.values[fs.cell_nodes],
-            quad_map,
-            mesh_jacobian,
-            quad.weights,
+            phi,
+            detJ,
+            Q.weights,
             optimize=True
         ))
