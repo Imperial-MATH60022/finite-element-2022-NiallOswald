@@ -190,10 +190,13 @@ class Function(object):
         :result: The integral (a scalar)."""
 
         fs = self.function_space
-        quad = gauss_quadrature(fs.element.cell, fs.element.degree + 1)
-        quad_map = fs.element.tabulate(quad.points)
-        mesh_jacobian = np.array([abs(np.linalg.det(fs.mesh.jacobian(c)))
-                                  for c in range(fs.mesh.entity_counts[-1])])
+        fe = fs.element
+        mesh = fs.mesh
+
+        quad = gauss_quadrature(fe.cell, fe.degree + 1)
+        quad_map = fe.tabulate(quad.points)
+        mesh_jacobian = np.array([abs(np.linalg.det(mesh.jacobian(c)))
+                                  for c in range(mesh.entity_counts[-1])])
 
         return float(np.einsum(
             "ci,qi,c,q",
