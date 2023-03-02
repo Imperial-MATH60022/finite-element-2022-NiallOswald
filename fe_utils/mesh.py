@@ -119,7 +119,7 @@ class Mesh(object):
         """
 
         return np.einsum("ja,jb", self.vertex_coords[self.cell_vertices[c]],
-                         self.cell_jacobian)
+                         self.cell_jacobian, optimize=True)
 
 
 class UnitIntervalMesh(Mesh):
