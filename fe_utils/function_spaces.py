@@ -193,7 +193,7 @@ class Function(object):
         fe = fs.element
         mesh = fs.mesh
 
-        quad = gauss_quadrature(fe.cell, fe.degree + 1)
+        quad = gauss_quadrature(fe.cell, fe.degree)
         quad_map = fe.tabulate(quad.points)
         mesh_jacobian = np.array([abs(np.linalg.det(mesh.jacobian(c)))
                                   for c in range(mesh.entity_counts[-1])])
