@@ -19,7 +19,7 @@ def assemble(fs, f):
     mesh = fs.mesh
 
     # Create an appropriate (complete) quadrature rule.
-    Q = gauss_quadrature(fe.cell, 2 * fe.degree - 1)
+    Q = gauss_quadrature(fe.cell, 2 * fe.degree)
 
     # Tabulate the basis functions and their gradients at the quadrature points.
     phi = fe.tabulate(Q.points)
