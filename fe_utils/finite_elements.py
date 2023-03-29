@@ -200,3 +200,81 @@ class LagrangeElement(FiniteElement):
 
         super(LagrangeElement, self).__init__(cell, degree, nodes,
                                               entity_nodes)
+
+class VectorFiniteElement:
+    def __init__(self, element):
+        """A vector finite element define over a cell.
+
+        :param element: the :class:`~.finite_elements.FiniteElement`
+            which underlies the vector finite element.
+        """
+
+        #: The :class:`~.finite_elements.FiniteElement`
+        #: which underlies the vector finite element.
+        self.element = element
+        #: The :class:`~.reference_elements.ReferenceCell`
+        #: over which the element is defined.
+        self.cell = element.cell
+        #: The polynomial degree of the element. We assume the element
+        #: spans the complete polynomial space.
+        self.degree = element.degree
+
+        self.dim = self.cell.dim
+
+        #: A dictionary of dictionaries such that ``entity_nodes[d][i]``
+        #: is the list of nodes associated with entity `(d, i)`.
+        self.entity_nodes = {
+            d: {
+                e: [
+                    i for n in element.entity_nodes[d][e]
+                    for i in range(n, n + 2)
+                ] for e in element.entity_nodes[d]
+            }
+            for d in element.entity_nodes
+        }
+        #: ``nodes_per_entity[d]`` is the number of entities
+        #: associated with an entity of dimension d.
+        self.nodes_per_entity = self.dim * element.nodes_per_entity
+
+        #: The list of coordinate tuples corresponding to the nodes of
+        #: the element.
+        self.nodes = [point for point in element.nodes for i in range(self.dim)]
+
+        #: The list of basis coordinates corresponding to the nodes of the
+        #: vector element.
+        self.node_weights = np.tile(np.eye(self.dim), (len(self.nodes), 1))
+
+    def tabulate(self, points, grad=False):
+        """Evaluate the basis functions of this vector finite element at the
+        points provided.
+
+        :param points: a list of coordinate tuples at which to
+            tabulate the basis.
+        :param grad: whether to return the tabulation of the basis or the
+            tabulation of the gradient of the basis.
+
+        :result: an array containing the value of each basis function
+            at each point. If `grad` is `True`, the gradient vector of
+            each basis vector at each point is returned as a rank 3
+            array. The shape of the array is (points, nodes) if
+            ``grad`` is ``False`` and (points, nodes, dim) if ``grad``
+            is ``True``.
+        """
+
+        # Tabulate the underlying scalar finite element
+        scalar_table = self.element.tabulate(points, grad)
+
+        # Reshape the table to match the vector finite element
+        shape = list(scalar_table.shape)
+        shape[1] *= self.dim
+        shape.append(self.dim)
+        vector_table = np.zeros(shape)
+
+        # Populate the table for the vector finite element
+        for d in range(self.dim):
+            if grad:
+                vector_table[:, d::self.dim, :, d] = scalar_table
+            else:
+                vector_table[:, d::self.dim, d] = scalar_table
+
+        return vector_table
