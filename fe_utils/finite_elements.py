@@ -221,20 +221,21 @@ class VectorFiniteElement:
 
         self.dim = self.cell.dim
 
-        #: A dictionary of dictionaries such that ``entity_nodes[d][i]``
-        #: is the list of nodes associated with entity `(d, i)`.
-        self.entity_nodes = {
-            d: {
-                e: [
-                    i for n in element.entity_nodes[d][e]
-                    for i in range(n, n + 2)
-                ] for e in element.entity_nodes[d]
+        if element.entity_nodes:
+            #: A dictionary of dictionaries such that ``entity_nodes[d][i]``
+            #: is the list of nodes associated with entity `(d, i)`.
+            self.entity_nodes = {
+                d: {
+                    e: [
+                        i for n in element.entity_nodes[d][e]
+                        for i in range(n, n + self.dim)
+                    ] for e in element.entity_nodes[d]
+                }
+                for d in element.entity_nodes
             }
-            for d in element.entity_nodes
-        }
-        #: ``nodes_per_entity[d]`` is the number of entities
-        #: associated with an entity of dimension d.
-        self.nodes_per_entity = self.dim * element.nodes_per_entity
+            #: ``nodes_per_entity[d]`` is the number of entities
+            #: associated with an entity of dimension d.
+            self.nodes_per_entity = self.dim * element.nodes_per_entity
 
         #: The list of coordinate tuples corresponding to the nodes of
         #: the element.
