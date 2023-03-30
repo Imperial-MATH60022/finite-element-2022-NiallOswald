@@ -245,6 +245,9 @@ class VectorFiniteElement:
         #: vector element.
         self.node_weights = np.tile(np.eye(self.dim), (len(self.nodes), 1))
 
+        #: The number of nodes in this element.
+        self.node_count = self.nodes.shape[0]
+
     def tabulate(self, points, grad=False):
         """Evaluate the basis functions of this vector finite element at the
         points provided.
