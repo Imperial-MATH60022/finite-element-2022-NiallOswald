@@ -1,6 +1,7 @@
 import numpy as np
 from . import ReferenceTriangle, ReferenceInterval
-from .finite_elements import LagrangeElement, lagrange_points
+from .finite_elements import (LagrangeElement, VectorFiniteElement,
+                              lagrange_points)
 from .quadrature import gauss_quadrature
 from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
@@ -94,6 +95,8 @@ class Function(object):
         # Create a map from the vertices to the element nodes on the
         # reference cell.
         cg1 = LagrangeElement(fs.element.cell, 1)
+        if isinstance(fs.element, VectorFiniteElement):
+            cg1v = VectorFiniteElement(cg1)
         coord_map = cg1.tabulate(fs.element.nodes)
         cg1fs = FunctionSpace(fs.mesh, cg1)
 
@@ -102,7 +105,13 @@ class Function(object):
             vertex_coords = fs.mesh.vertex_coords[cg1fs.cell_nodes[c, :], :]
             node_coords = np.dot(coord_map, vertex_coords)
 
-            self.values[fs.cell_nodes[c, :]] = [fn(x) for x in node_coords]
+            if isinstance(fs.element, VectorFiniteElement):
+                self.values[fs.cell_nodes[c, :]] = [
+                    np.dot(fn(x), e)
+                    for x, e in zip(node_coords, cg1v.node_weights)
+                ]
+            else:
+                self.values[fs.cell_nodes[c, :]] = [fn(x) for x in node_coords]
 
     def plot(self, subdivisions=None):
         """Plot the value of this :class:`Function`. This is quite a low
@@ -119,6 +128,17 @@ class Function(object):
         """
 
         fs = self.function_space
+
+        if isinstance(fs.element, VectorFiniteElement):
+            coords = Function(fs)
+            coords.interpolate(lambda x: x)
+            fig = plt.figure()
+            ax = fig.gca()
+            x = coords.values.reshape(-1, 2)
+            v = self.values.reshape(-1, 2)
+            plt.quiver(x[:, 0], x[:, 1], v[:, 0], v[:, 1])
+            plt.show()
+            return
 
         d = subdivisions or (
             2 * (fs.element.degree + 1) if fs.element.degree > 1 else 2
