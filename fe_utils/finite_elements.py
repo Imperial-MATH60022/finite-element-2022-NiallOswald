@@ -239,7 +239,9 @@ class VectorFiniteElement:
 
         #: The list of coordinate tuples corresponding to the nodes of
         #: the element.
-        self.nodes = [point for point in element.nodes for i in range(self.dim)]
+        self.nodes = np.ndarray(
+            [point for point in element.nodes for i in range(self.dim)]
+        )
 
         #: The list of basis coordinates corresponding to the nodes of the
         #: vector element.
