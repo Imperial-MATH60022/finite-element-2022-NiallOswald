@@ -227,8 +227,8 @@ class VectorFiniteElement:
             self.entity_nodes = {
                 d: {
                     e: [
-                        i for n in element.entity_nodes[d][e]
-                        for i in range(n, n + self.dim)
+                        self.dim * n + i for n in element.entity_nodes[d][e]
+                        for i in range(self.dim)
                     ] for e in element.entity_nodes[d]
                 }
                 for d in element.entity_nodes
