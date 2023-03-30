@@ -1,7 +1,8 @@
 '''Test the creation of the basis function coefficients for lagrange elements.'''
 import pytest
 import numpy as np
-from fe_utils import VectorFiniteElement, FiniteElement, ReferenceInterval, ReferenceTriangle
+from fe_utils import (VectorFiniteElement, FiniteElement, ReferenceInterval,
+                      ReferenceTriangle)
 from fe_utils.finite_elements import vandermonde_matrix
 
 

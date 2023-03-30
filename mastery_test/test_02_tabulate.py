@@ -1,6 +1,7 @@
 '''Test tabulation of basis functions.'''
 import pytest
-from fe_utils import ReferenceTriangle, ReferenceInterval, LagrangeElement, VectorFiniteElement
+from fe_utils import (ReferenceTriangle, ReferenceInterval, LagrangeElement,
+                      VectorFiniteElement)
 import numpy as np
 
 
