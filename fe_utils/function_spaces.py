@@ -182,6 +182,38 @@ class Function(object):
 
         plt.show()
 
+    def evaluate(self, x):
+        """Evaluate this :class:`Function` at a point or array of points.
+
+        :param x: A point or array of points at which to evaluate the
+          function. If `x` is an array, it should have shape `(N, d)`
+          where `N` is the number of points and `d` is the dimension
+          of the mesh.
+
+        :result: The value of the function at the point or points. If
+          `x` is an array, the result will have shape `(N,)`.
+
+        """
+
+        fs = self.function_space
+
+        if isinstance(fs.element, VectorFiniteElement):
+            coords = Function(fs)
+            coords.interpolate(lambda x: x)
+            x = np.array(x)
+            return np.array([
+                np.dot(self.values[fs.cell_nodes[c, :]],
+                       fs.element.tabulate(np.dot(coords.values[fs.cell_nodes[c, :]], x)))
+                for c in range(fs.mesh.entity_counts[-1])
+            ])
+        else:
+            print(self.values.shape, fs.cell_nodes.shape)
+            return np.array([
+                np.dot(self.values[fs.cell_nodes[c, :]],
+                       fs.element.tabulate(x).T)
+                for c in range(fs.mesh.entity_counts[-1])
+            ])
+
     @staticmethod
     def _lagrange_triangles(degree):
         # Triangles linking the Lagrange points.
