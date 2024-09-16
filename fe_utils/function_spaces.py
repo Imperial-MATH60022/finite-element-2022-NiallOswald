@@ -226,3 +226,9 @@ class Function(object):
             Q.weights,
             optimize=True
         ))
+    
+    def copy(self):
+        """Return a copy of this :class:`Function`."""
+        f = Function(self.function_space, self.name)
+        f.values[:] = self.values
+        return f
