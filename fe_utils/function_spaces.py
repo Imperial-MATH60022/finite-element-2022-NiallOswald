@@ -182,37 +182,56 @@ class Function(object):
 
         plt.show()
 
-    def evaluate(self, x):
-        """Evaluate this :class:`Function` at a point or array of points.
-
-        :param x: A point or array of points at which to evaluate the
-          function. If `x` is an array, it should have shape `(N, d)`
-          where `N` is the number of points and `d` is the dimension
-          of the mesh.
-
-        :result: The value of the function at the point or points. If
-          `x` is an array, the result will have shape `(N,)`.
-
-        """
+    def evaluate(self, subdivisions=None, triangles=False):
 
         fs = self.function_space
 
         if isinstance(fs.element, VectorFiniteElement):
             coords = Function(fs)
             coords.interpolate(lambda x: x)
-            x = np.array(x)
-            return np.array([
-                np.dot(self.values[fs.cell_nodes[c, :]],
-                       fs.element.tabulate(np.dot(coords.values[fs.cell_nodes[c, :]], x)))
-                for c in range(fs.mesh.entity_counts[-1])
-            ])
+            x = coords.values.reshape(-1, 2)
+            v = self.values.reshape(-1, 2)
+            
+            return x, v
+
+        d = subdivisions or (
+            2 * (fs.element.degree + 1) if fs.element.degree > 1 else 2
+        )
+
+        if fs.element.cell is ReferenceInterval:
+            # Interpolation rule for element values.
+            local_coords = lagrange_points(fs.element.cell, d)
+
+        elif fs.element.cell is ReferenceTriangle:
+            local_coords, triangles = self._lagrange_triangles(d)
+
         else:
-            print(self.values.shape, fs.cell_nodes.shape)
-            return np.array([
-                np.dot(self.values[fs.cell_nodes[c, :]],
-                       fs.element.tabulate(x).T)
-                for c in range(fs.mesh.entity_counts[-1])
-            ])
+            raise ValueError("Unknown reference cell: %s" % fs.element.cell)
+
+        function_map = fs.element.tabulate(local_coords)
+
+        # Interpolation rule for coordinates.
+        cg1 = LagrangeElement(fs.element.cell, 1)
+        coord_map = cg1.tabulate(local_coords)
+        cg1fs = FunctionSpace(fs.mesh, cg1)
+
+        coords = np.zeros((fs.mesh.entity_counts[-1], coord_map.shape[0], fs.element.cell.dim))
+        values = np.zeros((fs.mesh.entity_counts[-1], coord_map.shape[0]))
+
+        for c in range(fs.mesh.entity_counts[-1]):
+            vertex_coords = fs.mesh.vertex_coords[cg1fs.cell_nodes[c, :], :]
+            x = np.dot(coord_map, vertex_coords)
+
+            local_function_coefs = self.values[fs.cell_nodes[c, :]]
+            v = np.dot(function_map, local_function_coefs)
+            
+            coords[c, :, :] = x
+            values[c, :] = v
+
+        if triangles:
+            return coords, values, triangles
+        else:
+            return coords.reshape(-1, coords.shape[-1]), values.reshape(-1)
 
     @staticmethod
     def _lagrange_triangles(degree):
