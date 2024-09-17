@@ -19,7 +19,9 @@ def lagrange_points(cell, degree):
 
     """
 
-    raise NotImplementedError
+    cube = np.indices([degree + 1] * cell.dim)[::-1]
+    coords_sum = np.sum(cube, axis=0)
+    return np.stack(cube, axis=-1)[coords_sum <= degree] / degree
 
 
 def vandermonde_matrix(cell, degree, points, grad=False):
@@ -37,7 +39,38 @@ def vandermonde_matrix(cell, degree, points, grad=False):
     <ex-vandermonde>`.
     """
 
-    raise NotImplementedError
+    # Cast points to a np.ndarray
+    points = np.array(points)
+
+    # Construct the matrix of powers present in the Vandermonde matrix
+    if cell is ReferenceInterval:
+        i_p = np.arange(degree + 1).reshape(1, degree + 1)
+
+    elif cell is ReferenceTriangle:
+        x_p = np.concatenate([np.arange(d, -1, -1) for d in range(degree + 1)])
+        y_p = np.concatenate([np.arange(d + 1) for d in range(degree + 1)])
+
+        i_p = np.vstack([x_p, y_p])
+
+    else:
+        raise ValueError("Unknown reference cell")
+
+    if grad:
+        # Modify powers of the coordinates to account for the derivatives
+        d_p = i_p[:, np.newaxis, :] - np.eye(cell.dim)[:, :, np.newaxis]
+        # Repeat grid points into a new axis
+        point_mat = np.repeat(points[:, :, np.newaxis], cell.dim, axis=2)
+        # 'Outer-product'-like tensor power to compute all elements
+        vand_grad = np.prod(point_mat[:, :, :, np.newaxis] ** d_p, axis=1)
+        # Multiply by the powers of the coordinates to complete the derivatives
+        vand_grad = np.einsum('ikj,kj->ijk', vand_grad, i_p, optimize=True)
+        # Tidy up any NaNs or Infs
+        vand_grad = np.nan_to_num(vand_grad, nan=0, posinf=0, neginf=0)
+
+        return vand_grad
+
+    # 'Outer-product'-like tensor power to compute all elements
+    return np.prod(points[:, :, np.newaxis] ** i_p, axis=1)
 
 
 class FiniteElement(object):
@@ -77,10 +110,8 @@ class FiniteElement(object):
             self.nodes_per_entity = np.array([len(entity_nodes[d][0])
                                               for d in range(cell.dim+1)])
 
-        # Replace this exception with some code which sets
-        # self.basis_coefs
-        # to an array of polynomial coefficients defining the basis functions.
-        raise NotImplementedError
+        self.basis_coefs = np.linalg.inv(
+            vandermonde_matrix(cell, degree, nodes))
 
         #: The number of nodes in this element.
         self.node_count = nodes.shape[0]
@@ -106,7 +137,12 @@ class FiniteElement(object):
 
         """
 
-        raise NotImplementedError
+        return np.einsum(
+            'ib...,bj->ij...',
+            vandermonde_matrix(self.cell, self.degree, points, grad),
+            self.basis_coefs,
+            optimize=True
+        )
 
     def interpolate(self, fn):
         """Interpolate fn onto this finite element by evaluating it
@@ -123,7 +159,7 @@ class FiniteElement(object):
 
         """
 
-        raise NotImplementedError
+        return np.array([fn(x) for x in self.nodes])
 
     def __repr__(self):
         return "%s(%s, %s)" % (self.__class__.__name__,
@@ -145,9 +181,106 @@ class LagrangeElement(FiniteElement):
         <ex-lagrange-element>`.
         """
 
-        raise NotImplementedError
-        # Use lagrange_points to obtain the set of nodes.  Once you
-        # have obtained nodes, the following line will call the
-        # __init__ method on the FiniteElement class to set up the
-        # basis coefficients.
-        super(LagrangeElement, self).__init__(cell, degree, nodes)
+        nodes = lagrange_points(cell, degree)
+
+        class Found(Exception):
+            pass
+
+        entity_nodes = {d: {e: [] for e in range(cell.entity_counts[d])}
+                        for d in range(cell.dim + 1)}
+        for i, n in enumerate(nodes):
+            try:
+                for d in range(cell.dim + 1):
+                    for e in range(cell.entity_counts[d]):
+                        if cell.point_in_entity(n, (d, e)):
+                            entity_nodes[d][e].append(i)
+                            raise Found
+            except Found:
+                pass
+
+        super(LagrangeElement, self).__init__(cell, degree, nodes,
+                                              entity_nodes)
+
+class VectorFiniteElement:
+    def __init__(self, element):
+        """A vector finite element define over a cell.
+
+        :param element: the :class:`~.finite_elements.FiniteElement`
+            which underlies the vector finite element.
+        """
+
+        #: The :class:`~.finite_elements.FiniteElement`
+        #: which underlies the vector finite element.
+        self.element = element
+        #: The :class:`~.reference_elements.ReferenceCell`
+        #: over which the element is defined.
+        self.cell = element.cell
+        #: The polynomial degree of the element. We assume the element
+        #: spans the complete polynomial space.
+        self.degree = element.degree
+
+        self.dim = self.cell.dim
+
+        if element.entity_nodes:
+            #: A dictionary of dictionaries such that ``entity_nodes[d][i]``
+            #: is the list of nodes associated with entity `(d, i)`.
+            self.entity_nodes = {
+                d: {
+                    e: [
+                        self.dim * n + i for n in element.entity_nodes[d][e]
+                        for i in range(self.dim)
+                    ] for e in element.entity_nodes[d]
+                }
+                for d in element.entity_nodes
+            }
+            #: ``nodes_per_entity[d]`` is the number of entities
+            #: associated with an entity of dimension d.
+            self.nodes_per_entity = self.dim * element.nodes_per_entity
+
+        #: The list of coordinate tuples corresponding to the nodes of
+        #: the element.
+        self.nodes = np.array(
+            [point for point in element.nodes for i in range(self.dim)]
+        )
+
+        #: The list of basis coordinates corresponding to the nodes of the
+        #: vector element.
+        self.node_weights = np.tile(np.eye(self.dim), (len(self.nodes), 1))
+
+        #: The number of nodes in this element.
+        self.node_count = self.nodes.shape[0]
+
+    def tabulate(self, points, grad=False):
+        """Evaluate the basis functions of this vector finite element at the
+        points provided.
+
+        :param points: a list of coordinate tuples at which to
+            tabulate the basis.
+        :param grad: whether to return the tabulation of the basis or the
+            tabulation of the gradient of the basis.
+
+        :result: an array containing the value of each basis function
+            at each point. If `grad` is `True`, the gradient vector of
+            each basis vector at each point is returned as a rank 3
+            array. The shape of the array is (points, nodes) if
+            ``grad`` is ``False`` and (points, nodes, dim) if ``grad``
+            is ``True``.
+        """
+
+        # Tabulate the underlying scalar finite element
+        scalar_table = self.element.tabulate(points, grad)
+
+        # Reshape the table to match the vector finite element
+        shape = list(scalar_table.shape)
+        shape[1] *= self.dim
+        shape.append(self.dim)
+        vector_table = np.zeros(shape)
+
+        # Populate the table for the vector finite element
+        for d in range(self.dim):
+            if grad:
+                vector_table[:, d::self.dim, :, d] = scalar_table
+            else:
+                vector_table[:, d::self.dim, d] = scalar_table
+
+        return vector_table

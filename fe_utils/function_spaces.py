@@ -1,6 +1,8 @@
 import numpy as np
 from . import ReferenceTriangle, ReferenceInterval
-from .finite_elements import LagrangeElement, lagrange_points
+from .finite_elements import (LagrangeElement, VectorFiniteElement,
+                              lagrange_points)
+from .quadrature import gauss_quadrature
 from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
 
@@ -23,15 +25,31 @@ class FunctionSpace(object):
         #: The :class:`~.finite_elements.FiniteElement` of this space.
         self.element = element
 
-        raise NotImplementedError
-
-        # Implement global numbering in order to produce the global
-        # cell node list for this space.
         #: The global cell node list. This is a two-dimensional array in
         #: which each row lists the global nodes incident to the corresponding
         #: cell. The implementation of this member is left as an
         #: :ref:`exercise <ex-function-space>`
-        self.cell_nodes = None
+        self.cell_nodes = np.zeros(
+            (mesh.entity_counts[-1], element.node_count), dtype=int
+        )
+        for c in range(mesh.entity_counts[-1]):
+            g_dim = 0
+            for d in range(mesh.dim):
+                adj = mesh.adjacency(mesh.dim, d)
+                for e in range(mesh.cell.entity_counts[d]):
+                    g = adj[c, e] * element.nodes_per_entity[d] + g_dim
+
+                    self.cell_nodes[c, element.entity_nodes[d][e]] = (
+                        g + np.arange(element.nodes_per_entity[d])
+                    )
+
+                g_dim += element.nodes_per_entity[d] * mesh.entity_counts[d]
+
+            g = c * element.nodes_per_entity[d + 1] + g_dim
+
+            self.cell_nodes[c, element.entity_nodes[d + 1][0]] = (
+                g + np.arange(element.nodes_per_entity[d + 1])
+            )
 
         #: The total number of nodes in the function space.
         self.node_count = np.dot(element.nodes_per_entity, mesh.entity_counts)
@@ -77,6 +95,8 @@ class Function(object):
         # Create a map from the vertices to the element nodes on the
         # reference cell.
         cg1 = LagrangeElement(fs.element.cell, 1)
+        if isinstance(fs.element, VectorFiniteElement):
+            cg1v = VectorFiniteElement(cg1)
         coord_map = cg1.tabulate(fs.element.nodes)
         cg1fs = FunctionSpace(fs.mesh, cg1)
 
@@ -85,7 +105,13 @@ class Function(object):
             vertex_coords = fs.mesh.vertex_coords[cg1fs.cell_nodes[c, :], :]
             node_coords = np.dot(coord_map, vertex_coords)
 
-            self.values[fs.cell_nodes[c, :]] = [fn(x) for x in node_coords]
+            if isinstance(fs.element, VectorFiniteElement):
+                self.values[fs.cell_nodes[c, :]] = [
+                    np.dot(fn(x), e)
+                    for x, e in zip(node_coords, cg1v.node_weights)
+                ]
+            else:
+                self.values[fs.cell_nodes[c, :]] = [fn(x) for x in node_coords]
 
     def plot(self, subdivisions=None):
         """Plot the value of this :class:`Function`. This is quite a low
@@ -103,6 +129,17 @@ class Function(object):
 
         fs = self.function_space
 
+        if isinstance(fs.element, VectorFiniteElement):
+            coords = Function(fs)
+            coords.interpolate(lambda x: x)
+            fig = plt.figure()
+            ax = fig.gca()
+            x = coords.values.reshape(-1, 2)
+            v = self.values.reshape(-1, 2)
+            plt.quiver(x[:, 0], x[:, 1], v[:, 0], v[:, 1])
+            plt.show()
+            return
+
         d = subdivisions or (
             2 * (fs.element.degree + 1) if fs.element.degree > 1 else 2
         )
@@ -115,7 +152,7 @@ class Function(object):
 
         elif fs.element.cell is ReferenceTriangle:
             fig = plt.figure()
-            ax = fig.gca(projection='3d')
+            ax = fig.add_subplot(projection='3d')
             local_coords, triangles = self._lagrange_triangles(d)
 
         else:
@@ -145,6 +182,57 @@ class Function(object):
 
         plt.show()
 
+    def evaluate(self, subdivisions=None, return_triangles=False):
+
+        fs = self.function_space
+
+        if isinstance(fs.element, VectorFiniteElement):
+            coords = Function(fs)
+            coords.interpolate(lambda x: x)
+            x = coords.values.reshape(-1, 2)
+            v = self.values.reshape(-1, 2)
+            
+            return x, v
+
+        d = subdivisions or (
+            2 * (fs.element.degree + 1) if fs.element.degree > 1 else 2
+        )
+
+        if fs.element.cell is ReferenceInterval:
+            # Interpolation rule for element values.
+            local_coords = lagrange_points(fs.element.cell, d)
+
+        elif fs.element.cell is ReferenceTriangle:
+            local_coords, triangles = self._lagrange_triangles(d)
+
+        else:
+            raise ValueError("Unknown reference cell: %s" % fs.element.cell)
+
+        function_map = fs.element.tabulate(local_coords)
+
+        # Interpolation rule for coordinates.
+        cg1 = LagrangeElement(fs.element.cell, 1)
+        coord_map = cg1.tabulate(local_coords)
+        cg1fs = FunctionSpace(fs.mesh, cg1)
+
+        coords = np.zeros((fs.mesh.entity_counts[-1], coord_map.shape[0], fs.element.cell.dim))
+        values = np.zeros((fs.mesh.entity_counts[-1], coord_map.shape[0]))
+
+        for c in range(fs.mesh.entity_counts[-1]):
+            vertex_coords = fs.mesh.vertex_coords[cg1fs.cell_nodes[c, :], :]
+            x = np.dot(coord_map, vertex_coords)
+
+            local_function_coefs = self.values[fs.cell_nodes[c, :]]
+            v = np.dot(function_map, local_function_coefs)
+            
+            coords[c, :, :] = x
+            values[c, :] = v
+
+        if return_triangles:
+            return coords, values, triangles
+        else:
+            return coords.reshape(-1, coords.shape[-1]), values.reshape(-1)
+
     @staticmethod
     def _lagrange_triangles(degree):
         # Triangles linking the Lagrange points.
@@ -172,4 +260,26 @@ class Function(object):
 
         :result: The integral (a scalar)."""
 
-        raise NotImplementedError
+        fs = self.function_space
+        fe = fs.element
+        mesh = fs.mesh
+
+        Q = gauss_quadrature(fe.cell, fe.degree)
+        phi = fe.tabulate(Q.points)
+        detJ = np.array([abs(np.linalg.det(mesh.jacobian(c)))
+                         for c in range(mesh.entity_counts[-1])])
+
+        return float(np.einsum(
+            "ci,qi,c,q",
+            self.values[fs.cell_nodes],
+            phi,
+            detJ,
+            Q.weights,
+            optimize=True
+        ))
+    
+    def copy(self):
+        """Return a copy of this :class:`Function`."""
+        f = Function(self.function_space, self.name)
+        f.values[:] = self.values
+        return f
