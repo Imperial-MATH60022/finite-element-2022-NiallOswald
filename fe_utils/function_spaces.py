@@ -182,7 +182,7 @@ class Function(object):
 
         plt.show()
 
-    def evaluate(self, subdivisions=None, triangles=False):
+    def evaluate(self, subdivisions=None, return_triangles=False):
 
         fs = self.function_space
 
@@ -228,7 +228,7 @@ class Function(object):
             coords[c, :, :] = x
             values[c, :] = v
 
-        if triangles:
+        if return_triangles:
             return coords, values, triangles
         else:
             return coords.reshape(-1, coords.shape[-1]), values.reshape(-1)
